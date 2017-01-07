@@ -25,6 +25,45 @@ $applImages = array();
 
 class PView {
 
+	private $pref = array();
+	private $userImgCount = array();
+
+	function __construct()
+	{
+
+		$sql = e107::getDb();
+		$tmp = $sql->retrieve('pview_config', 'configName,configValue',"configName !=''", true);
+		foreach($tmp as $row)
+		{
+			$key = $row['configName'];
+			$this->pref[$key] = $row['configValue'];
+		}
+
+
+		// get user image counts.
+		$tmp = $sql->retrieve("pview_image", "imageId,uploaderUserId", "WHERE uploaderUserId !=''", true);
+		foreach($tmp as $row)
+		{
+			$key = $row['uploaderUserId'];
+			if(!isset($this->userImgCount[$key]))
+			{
+				$this->userImgCount[$key] = 0;
+			}
+
+			if ($this -> getPermission("image",$row['imageId'],"View"))
+			{
+				$this->userImgCount[$key]++;
+			}
+
+		}
+
+
+
+
+	}
+
+
+
 function getSortArray() {
 // returns array with sortstring as key and Wording as value, used for sorting-select box
 	$sortArray = array('name'=>LAN_IMAGE_9,'albumId'=>LAN_ADMIN_156,'uploaderUserId'=>LAN_ADMIN_157,'uploadDate'=>LAN_ADMIN_158,'cat'=>LAN_IMAGE_45,'views'=>LAN_ADMIN_159,'commentscount'=>LAN_ADMIN_110,'ratingvalue'=>LAN_IMAGE_3);
@@ -53,12 +92,25 @@ function getUserclasses() {
 	}
 	return $UserClasses;
 }
-function getPView_config($pv_config) {
+function getPView_config($pv_config)
+ {
 // returns preference values
-	$conf_SQL =& new db;
-	$conf_SQL->db_Select("pview_config", "configValue", "WHERE configName='$pv_config'", "nowhere");
+
+	if(isset($this->pref[$pv_config]))
+	{
+		return $this->pref[$pv_config];
+	}
+
+/*
+	$conf_SQL = new db;
+	if(!$conf_SQL->db_Select("pview_config", "configValue", "WHERE configName='$pv_config'", "nowhere"))
+	{
+
+	}
+
 	list($ConfigValue) = $conf_SQL -> db_Fetch();
-	return $ConfigValue;
+
+	return $ConfigValue;*/
 }
 function getPath() {
 // returns the way from rootgallery to destination for all views (used in tablerender call)
@@ -228,7 +280,7 @@ function getPermissionRequest($object,$objectid,$request) {
 	
 	//Main Database Request
 	
-	$perm_SQL =& new db;
+	$perm_SQL = new db;
 	$perm_SQL->db_Select("$objectTable", "$requestField", "WHERE $objectField='$objectid'", "nowhere");
 	list($Perm) = $perm_SQL -> db_Fetch();
 	//if result NULL: return false
@@ -459,7 +511,7 @@ function getStatistic_Cats($mode = "latest") {
 }
 function getStatistic_Uploader() {
 // returns a array of uploader for statistic, key is userId
-	$u_SQL =& new db;
+	$u_SQL = new db;
 	$userArray = array();
 	$u_SQL -> db_Select("user", "user_id","", "nowhere");
 	while($userTmp = $u_SQL -> db_Fetch()) {
@@ -472,7 +524,7 @@ function getStatistic_Uploader() {
 }
 function getStatistic_Comm() {
 // returns a array of user commented images for statistic, key is userId
-	$c_SQL =& new db;
+	$c_SQL = new db;
 	$userArray = array();
 	$c_SQL -> db_Select("user", "user_id","", "nowhere");
 	while($userTmp = $c_SQL -> db_Fetch()) {
@@ -595,9 +647,17 @@ function getCatImageCount($catid) {
 	}
 	return strval ($Count);
 }
-function getUserImageCount($userid) {
+function getUserImageCount($userid)
+{
 // returns count of images in user view as string
-	$Count = 0;
+
+	if(isset($this->userImgCount[$userid]))
+	{
+		return (string) $this->userImgCount[$userid];
+	}
+
+	return null;
+	/*$Count = 0;
 	global $sql;
 	$sql->db_Select("pview_image", "*", "WHERE uploaderUserId='$userid'", "nowhere");
 	while ($ImageCount = $sql -> db_Fetch())
@@ -607,7 +667,7 @@ function getUserImageCount($userid) {
 			$Count++;
 		}
 	}
-	return strval ($Count);
+	return strval ($Count);*/
 }
 
 function getSubAlbumsCount($albumid,$ignorePerm) {
@@ -643,7 +703,7 @@ function getAllGalleryData () {
 
 function getGalleryActive($galleryid) {
 // returns true if gallery is active
-	$gal_SQL =& new db;
+	$gal_SQL = new db;
 	$gal_SQL -> db_Select("pview_gallery", "active", "WHERE galleryId='$galleryid'", "nowhere");
 	list($galActive) = $gal_SQL -> db_Fetch();
 	return $galActive;
@@ -776,7 +836,7 @@ function getImageAlbum($imageid) {
 function getApplImages(){
 // returns a 2D array of images data, acc. to selected view, incl. rating and commentscount for sorting 	
 	$Appl = $this -> getAppl();
-	$i_SQL =& new db;
+	$i_SQL = new db;
 	$out_Images = array();
 	$Image = array();
 	global $ImageSort;
@@ -939,7 +999,7 @@ function getRatingData($imageid) {
 	if ($Appl[0] == "image" && !$imageid) {
 		$imageid = $Appl [1];
 	}
-	$r_SQL =& new db;
+	$r_SQL = new db;
 	$Count = 0;
 	$Value = 0;
 	$r_SQL->db_Select("pview_rating", "ratingValue", "WHERE ratingImageId='$imageid'", "nowhere");
